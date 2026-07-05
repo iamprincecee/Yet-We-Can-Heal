@@ -186,6 +186,12 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex gap-3">
           <Link
+            href="/admin/articles"
+            className="font-mono text-xs uppercase tracking-wide border border-ink/20 px-4 py-2 rounded-full hover:border-ember hover:text-ember"
+          >
+            Articles
+          </Link>
+          <Link
             href="/admin/messages"
             className="font-mono text-xs uppercase tracking-wide border border-ink/20 px-4 py-2 rounded-full hover:border-ember hover:text-ember"
           >

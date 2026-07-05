@@ -36,7 +36,11 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
       </div>
       <h3 className="font-display text-lg">{member.name}</h3>
       <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3">{member.role}</p>
-      {member.bio && <p className="font-body text-sm text-ink/70 leading-relaxed">{member.bio}</p>}
+      {member.bio && (
+        <p className="font-body text-sm text-ink/70 leading-relaxed line-clamp-6">
+          {member.bio}
+        </p>
+      )}
     </div>
   );
 }
@@ -87,7 +91,7 @@ export default function AboutPage() {
           {loadingTeam ? (
             <p className="font-body text-ink/50">Loading team...</p>
           ) : (
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-start">
               {team.map((member) => (
                 <TeamMemberCard key={member.id} member={member} />
               ))}
