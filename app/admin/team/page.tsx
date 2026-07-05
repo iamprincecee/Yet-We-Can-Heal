@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-type Member = { id: string; email: string; role: "super_admin" | "editor" };
+type Member = { id: string; email: string; role: "super_admin" | "editor"; is_founder: boolean };
 
 export default function TeamManagementPage() {
   const [team, setTeam] = useState<Member[]>([]);
@@ -13,11 +13,20 @@ export default function TeamManagementPage() {
   const [newRole, setNewRole] = useState<"super_admin" | "editor">("editor");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentIsFounder, setCurrentIsFounder] = useState(false);
 
   async function loadTeam() {
     const supabase = createClient();
-    const { data } = await supabase.from("admin_profiles").select("id, email, role");
-    setTeam((data as Member[]) ?? []);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id ?? null);
+
+    const { data } = await supabase.from("admin_profiles").select("id, email, role, is_founder");
+    const members = (data as Member[]) ?? [];
+    setTeam(members);
+    setCurrentIsFounder(members.find((m) => m.id === user?.id)?.is_founder ?? false);
     setLoading(false);
   }
 
@@ -50,8 +59,14 @@ export default function TeamManagementPage() {
   }
 
   async function removeMember(id: string) {
+    setError(null);
     const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
-    if (res.ok) setTeam((prev) => prev.filter((m) => m.id !== id));
+    if (res.ok) {
+      setTeam((prev) => prev.filter((m) => m.id !== id));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Couldn't remove that member.");
+    }
   }
 
   return (
@@ -61,26 +76,58 @@ export default function TeamManagementPage() {
       </Link>
       <h1 className="font-display text-3xl mt-4 mb-8">Manage team access</h1>
 
+      {error && <p className="font-body text-sm text-ember mb-4">{error}</p>}
+
       {loading ? (
         <p className="font-body text-ink/50 mb-10">Loading team...</p>
       ) : (
         <div className="space-y-3 mb-10">
-          {team.map((member) => (
-            <div key={member.id} className="flex items-center justify-between bg-white border border-ink/10 rounded-card p-4">
-              <div>
-                <p className="font-body">{member.email}</p>
-                <p className="font-mono text-xs uppercase tracking-wide text-ink/50">
-                  {member.role === "super_admin" ? "Super Admin" : "Editor"}
-                </p>
+          {team.map((member) => {
+            const isSelf = member.id === currentUserId;
+            // Who can this viewer remove?
+            //  - never the founder
+            //  - never yourself
+            //  - another super admin: only if you are the founder
+            //  - editors: any super admin can
+            const canRemove =
+              !member.is_founder &&
+              !isSelf &&
+              (member.role !== "super_admin" || currentIsFounder);
+
+            return (
+              <div key={member.id} className="flex items-center justify-between bg-white border border-ink/10 rounded-card p-4">
+                <div>
+                  <p className="font-body">
+                    {member.email}
+                    {isSelf && <span className="text-ink/40 font-normal"> (you)</span>}
+                  </p>
+                  <p className="font-mono text-xs uppercase tracking-wide text-ink/50">
+                    {member.is_founder
+                      ? "Founder · Super Admin"
+                      : member.role === "super_admin"
+                        ? "Super Admin"
+                        : "Editor"}
+                  </p>
+                </div>
+                {canRemove ? (
+                  <button
+                    onClick={() => removeMember(member.id)}
+                    className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember"
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <span className="font-mono text-xs uppercase tracking-wide text-ink/20" title={
+                    member.is_founder ? "The founder can't be removed" :
+                    isSelf ? "You can't remove yourself" :
+                    "Only the founder can remove a Super Admin"
+                  }>
+                    —
+                  </span>
+                )}
               </div>
-              <button
-                onClick={() => removeMember(member.id)}
-                className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
