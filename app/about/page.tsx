@@ -21,10 +21,23 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function TeamMemberCard({ member }: { member: TeamMember }) {
+function TeamMemberCard({
+  member,
+  onReadMore,
+}: {
+  member: TeamMember;
+  onReadMore: (m: TeamMember) => void;
+}) {
+  // A short preview: first ~90 chars of the bio, so every card's body area is
+  // roughly the same. The full bio lives in the modal behind "Read more".
+  const preview =
+    member.bio && member.bio.length > 90 ? member.bio.slice(0, 90).trimEnd() + "…" : member.bio;
+  const hasMore = !!member.bio && member.bio.length > 90;
+
   return (
-    <div className="bg-white border border-ink/10 rounded-card p-6 text-center">
-      <div className="w-24 h-24 mx-auto mb-4">
+    // Fixed height + flex column so every card is identical regardless of bio.
+    <div className="bg-white border border-ink/10 rounded-card p-6 text-center flex flex-col h-72">
+      <div className="w-24 h-24 mx-auto mb-4 shrink-0">
         {member.photo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={member.photo_url} alt={member.name} className="w-24 h-24 rounded-full object-cover" />
@@ -34,13 +47,77 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
           </div>
         )}
       </div>
-      <h3 className="font-display text-lg">{member.name}</h3>
-      <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3">{member.role}</p>
+      <h3 className="font-display text-lg shrink-0">{member.name}</h3>
+      <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3 shrink-0">
+        {member.role}
+      </p>
       {member.bio && (
-        <p className="font-body text-sm text-ink/70 leading-relaxed line-clamp-6">
-          {member.bio}
+        <p className="font-body text-sm text-ink/70 leading-relaxed line-clamp-3 flex-1">
+          {preview}
         </p>
       )}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => onReadMore(member)}
+          className="font-mono text-xs uppercase tracking-wide text-ember hover:text-ink transition-colors mt-3 shrink-0 self-center"
+        >
+          Read more
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TeamMemberModal({ member, onClose }: { member: TeamMember; onClose: () => void }) {
+  // Close on Escape key.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-card max-w-lg w-full max-h-[85vh] overflow-y-auto p-8 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-5 font-mono text-sm text-ink/40 hover:text-ember transition-colors"
+        >
+          ✕ close
+        </button>
+
+        <div className="text-center mb-6">
+          <div className="w-28 h-28 mx-auto mb-4">
+            {member.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={member.photo_url} alt={member.name} className="w-28 h-28 rounded-full object-cover" />
+            ) : (
+              <div className="w-28 h-28 rounded-full bg-blush flex items-center justify-center font-display text-3xl text-ink/60">
+                {initials(member.name)}
+              </div>
+            )}
+          </div>
+          <h3 className="font-display text-2xl">{member.name}</h3>
+          <p className="font-mono text-xs uppercase tracking-wide text-ink/50">{member.role}</p>
+        </div>
+
+        <p className="font-body text-ink/80 leading-relaxed whitespace-pre-line">{member.bio}</p>
+      </div>
     </div>
   );
 }
@@ -48,6 +125,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
 export default function AboutPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(true);
+  const [activeMember, setActiveMember] = useState<TeamMember | null>(null);
 
   useEffect(() => {
     async function loadTeam() {
@@ -93,7 +171,7 @@ export default function AboutPage() {
           ) : (
             <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-start">
               {team.map((member) => (
-                <TeamMemberCard key={member.id} member={member} />
+                <TeamMemberCard key={member.id} member={member} onReadMore={setActiveMember} />
               ))}
             </div>
           )}
@@ -104,13 +182,17 @@ export default function AboutPage() {
         <PaintSplash color="tidewater" className="absolute -bottom-16 -right-16 w-56 h-56 opacity-30 -z-0" />
         <h2 className="font-display text-2xl mb-4 relative z-10">What inspired this project</h2>
         <p className="font-body text-white/80 leading-relaxed max-w-2xl relative z-10">
-          [To be written... This should contain the team&apos;s own account of the moment, conversation,
+          [Placeholder — replace with the team&apos;s own account of the moment, conversation,
           or shared experience that led to building Yet, We Can Heal. This is the heart
-          of the About page, so it&apos;s worth writing in your own words.]
+          of the About page, so it&apos;s worth writing in your own words rather than ours.]
         </p>
       </div>
 
       <ContactSection />
+
+      {activeMember && (
+        <TeamMemberModal member={activeMember} onClose={() => setActiveMember(null)} />
+      )}
     </section>
   );
 }
