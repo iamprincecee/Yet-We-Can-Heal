@@ -5,8 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // DELETE /api/admin/users/:id -- Super Admin only.
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin({ superAdmin: true });
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  const { ctx } = auth;
+  if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const ctx = auth.ctx;
 
   // Guard against a Super Admin removing their own account and orphaning access.
   if (params.id === ctx.userId) {

@@ -6,8 +6,8 @@ import { requireAdmin } from "@/lib/auth";
 // a submission. Logged to the activity trail for accountability.
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin();
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  const { ctx } = auth;
+  if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const ctx = auth.ctx;
 
   const supabase = createClient();
   const { error } = await supabase.from("stories").delete().eq("id", params.id);

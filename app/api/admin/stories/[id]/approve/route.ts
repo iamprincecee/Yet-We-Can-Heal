@@ -7,8 +7,8 @@ import { requireAdmin } from "@/lib/auth";
 // being that a Super Admin can always see exactly who approved what, and when.
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin();
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  const { ctx } = auth;
+  if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const ctx = auth.ctx;
 
   const supabase = createClient();
   const body = await request.json().catch(() => ({}));

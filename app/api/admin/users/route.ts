@@ -8,8 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // passwords for other people.
 export async function POST(request: Request) {
   const auth = await requireAdmin({ superAdmin: true });
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  const { ctx } = auth;
+  if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const ctx = auth.ctx;
 
   const { email, role } = await request.json().catch(() => ({}));
   if (!email || !["editor", "super_admin"].includes(role)) {
