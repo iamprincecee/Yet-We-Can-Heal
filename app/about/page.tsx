@@ -104,9 +104,9 @@ export default function AboutPage() {
         <PaintSplash color="tidewater" className="absolute -bottom-16 -right-16 w-56 h-56 opacity-30 -z-0" />
         <h2 className="font-display text-2xl mb-4 relative z-10">What inspired this project</h2>
         <p className="font-body text-white/80 leading-relaxed max-w-2xl relative z-10">
-          [Placeholder — replace with the team&apos;s own account of the moment, conversation,
+          [To be written... This should contain the team&apos;s own account of the moment, conversation,
           or shared experience that led to building Yet, We Can Heal. This is the heart
-          of the About page, so it&apos;s worth writing in your own words rather than ours.]
+          of the About page, so it&apos;s worth writing in your own words.]
         </p>
       </div>
 
