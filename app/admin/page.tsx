@@ -14,13 +14,23 @@ type PendingStory = {
 };
 
 type Metrics = {
-  pageViews: number;
+  uniqueVisitors: number;
+  avgTimeOnSiteSeconds: number;
   storyReads: number;
   submissions: number;
   waitlistJoins: number;
   mostSelectedEmotions: { emotion: string; count: number }[];
   submissionEmotionBreakdown: { emotion: string; count: number }[];
 };
+
+// Format seconds as m:ss (e.g. 95 -> "1:35"). Shows "0s" when empty.
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds < 1) return "0s";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s}s`;
+}
 
 export default function AdminDashboardPage() {
   const [queue, setQueue] = useState<PendingStory[]>([]);
@@ -211,8 +221,9 @@ export default function AdminDashboardPage() {
         <span className="w-2 h-2 rounded-full bg-tidewater animate-pulse" />
         <p className="font-mono text-xs uppercase tracking-wide text-ink/50">Live · updates every few seconds</p>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <MetricCard label="Page views" value={String(metrics?.pageViews ?? 0)} />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <MetricCard label="Unique visitors" value={String(metrics?.uniqueVisitors ?? 0)} />
+        <MetricCard label="Avg time on site" value={formatDuration(metrics?.avgTimeOnSiteSeconds ?? 0)} />
         <MetricCard label="Stories read" value={String(metrics?.storyReads ?? 0)} />
         <MetricCard label="Submissions" value={String(metrics?.submissions ?? 0)} />
         <MetricCard label="Waitlist joins" value={String(metrics?.waitlistJoins ?? 0)} />

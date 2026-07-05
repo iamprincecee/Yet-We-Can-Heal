@@ -3,7 +3,7 @@ import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
-import PageViewTracker from "@/components/PageViewTracker";
+import VisitorTracker from "@/components/VisitorTracker";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -46,7 +46,7 @@ export default function RootLayout({
         className={`${fraunces.variable} ${inter.variable} ${plexMono.variable} font-body antialiased`}
       >
         <SiteHeader />
-        <PageViewTracker />
+        <VisitorTracker />
         <main>{children}</main>
         <footer className="px-6 md:px-12 py-10 border-t border-ink/5 mt-20 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-ink/60">
           <p>© {new Date().getFullYear()} Yet, We Can Heal. Not a substitute for professional care.</p>
