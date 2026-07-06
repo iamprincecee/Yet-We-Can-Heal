@@ -36,13 +36,13 @@ function TeamMemberCard({
 
   return (
     // Fixed height + flex column so every card is identical regardless of bio.
-    <div className="bg-white border border-ink/10 rounded-card p-6 text-center flex flex-col h-80">
-      <div className="w-32 h-32 mx-auto mb-4 shrink-0">
+    <div className="bg-white border border-ink/10 rounded-card p-6 text-center flex flex-col h-[440px]">
+      <div className="w-48 h-48 mx-auto mb-4 shrink-0">
         {member.photo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={member.photo_url} alt={member.name} className="w-32 h-32 rounded-full object-cover" />
+          <img src={member.photo_url} alt={member.name} className="w-48 h-48 rounded-full object-cover" />
         ) : (
-          <div className="w-32 h-32 rounded-full bg-blush flex items-center justify-center font-display text-3xl text-ink/60">
+          <div className="w-48 h-48 rounded-full bg-blush flex items-center justify-center font-display text-5xl text-ink/60">
             {initials(member.name)}
           </div>
         )}
@@ -102,12 +102,12 @@ function TeamMemberModal({ member, onClose }: { member: TeamMember; onClose: () 
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-32 h-32 mx-auto mb-4">
+          <div className="w-48 h-48 mx-auto mb-4">
             {member.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={member.photo_url} alt={member.name} className="w-32 h-32 rounded-full object-cover" />
+              <img src={member.photo_url} alt={member.name} className="w-48 h-48 rounded-full object-cover" />
             ) : (
-              <div className="w-32 h-32 rounded-full bg-blush flex items-center justify-center font-display text-3xl text-ink/60">
+              <div className="w-48 h-48 rounded-full bg-blush flex items-center justify-center font-display text-5xl text-ink/60">
                 {initials(member.name)}
               </div>
             )}
