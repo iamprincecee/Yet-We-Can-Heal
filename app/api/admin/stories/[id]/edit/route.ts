@@ -10,7 +10,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const supabase = createClient();
   const updates = await request.json().catch(() => ({}));
-  const allowedFields = ["title", "body", "what_helped_heal", "emotion_tags", "trigger_warning"];
+  const allowedFields = ["title", "body", "what_helped_heal", "emotion_tags", "trigger_warning", "image_url"];
   const payload: Record<string, unknown> = {};
   for (const key of allowedFields) {
     if (key in updates) payload[key] = updates[key];

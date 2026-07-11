@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
-  const { title, excerpt, body: articleBody, emotionTags, isAnonymous, authorName, authorLink } =
+  const { title, excerpt, body: articleBody, emotionTags, isAnonymous, authorName } =
     body;
 
   if (!title || !articleBody) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     status: "pending",
     is_anonymous: isAnonymous !== false,
     author_name: isAnonymous === false ? authorName.trim() : null,
-    author_link: isAnonymous === false && authorLink?.trim() ? authorLink.trim() : null,
+    author_link: null,
   });
 
   if (error) {

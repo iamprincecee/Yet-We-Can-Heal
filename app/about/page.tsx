@@ -35,14 +35,16 @@ function TeamMemberCard({
   const hasMore = !!member.bio && member.bio.length > 90;
 
   return (
-    // Fixed height + flex column so every card is identical regardless of bio.
-    <div className="bg-white border border-ink/10 rounded-card p-6 text-center flex flex-col h-[440px]">
-      <div className="w-48 h-48 mx-auto mb-4 shrink-0">
+    // Top-aligned, fixed structure: image, name, role, then bio all sit in the
+    // SAME position on every card whether or not a bio exists — so a card with
+    // no description lines up perfectly with its neighbours.
+    <div className="bg-white border border-ink/10 rounded-card p-6 text-center flex flex-col items-center h-[420px]">
+      <div className="w-36 h-36 mb-5 shrink-0">
         {member.photo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={member.photo_url} alt={member.name} className="w-48 h-48 rounded-full object-cover" />
+          <img src={member.photo_url} alt={member.name} className="w-36 h-36 rounded-full object-cover" />
         ) : (
-          <div className="w-48 h-48 rounded-full bg-blush flex items-center justify-center font-display text-5xl text-ink/60">
+          <div className="w-36 h-36 rounded-full bg-blush flex items-center justify-center font-display text-4xl text-ink/60">
             {initials(member.name)}
           </div>
         )}
@@ -51,19 +53,23 @@ function TeamMemberCard({
       <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3 shrink-0">
         {member.role}
       </p>
-      {member.bio && (
-        <p className="font-body text-sm text-ink/70 leading-relaxed line-clamp-3 flex-1">
+      {member.bio ? (
+        <p className="font-body text-sm text-ink/70 leading-relaxed line-clamp-3 h-[3.9rem] overflow-hidden">
           {preview}
         </p>
+      ) : (
+        <div className="h-[3.9rem]" />
       )}
-      {hasMore && (
+      {hasMore ? (
         <button
           type="button"
           onClick={() => onReadMore(member)}
-          className="font-mono text-xs uppercase tracking-wide text-ember hover:text-ink transition-colors mt-3 shrink-0 self-center"
+          className="font-mono text-xs uppercase tracking-wide text-ember hover:text-ink transition-colors mt-4 shrink-0 self-center"
         >
           Read more
         </button>
+      ) : (
+        <div className="mt-4 h-4" />
       )}
     </div>
   );
@@ -158,7 +164,7 @@ export default function AboutPage() {
         <p className="font-body text-ink/80 leading-relaxed">
           We&apos;re not therapists, and this isn&apos;t a replacement for professional
           care. We&apos;re a small team who cared enough about this to build something —
-          a quiet place for people who aren&apos;t ready for formal help, or just need to
+          a place for people who aren&apos;t ready for formal help, or just need to
           know they&apos;re not the only one who&apos;s felt this way.
         </p>
       </div>

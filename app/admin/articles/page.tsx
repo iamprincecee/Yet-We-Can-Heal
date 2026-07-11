@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { emotions } from "@/lib/emotions";
+import ImageUploader from "@/components/admin/ImageUploader";
 
 type Article = {
   id: string;
@@ -15,6 +16,7 @@ type Article = {
   is_anonymous: boolean;
   author_name: string | null;
   author_link: string | null;
+  image_url: string | null;
   submitted_at: string;
 };
 
@@ -27,12 +29,14 @@ export default function AdminArticlesPage() {
   // Per-article approval fields (slug + tags the admin will publish with).
   const [slugDraft, setSlugDraft] = useState<Record<string, string>>({});
   const [tagDraft, setTagDraft] = useState<Record<string, string[]>>({});
+  const [imageDraft, setImageDraft] = useState<Record<string, string | null>>({});
 
   // Write-new form
   const [newDraft, setNewDraft] = useState({
-    title: "", slug: "", excerpt: "", body: "", isAnonymous: true, authorName: "", authorLink: "",
+    title: "", slug: "", excerpt: "", body: "", isAnonymous: true, authorName: "",
   });
   const [newTags, setNewTags] = useState<string[]>([]);
+  const [newImage, setNewImage] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
@@ -67,7 +71,7 @@ export default function AdminArticlesPage() {
     const res = await fetch(`/api/admin/articles/${a.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "approve", slug: slugDraft[a.id], emotionTags: tagDraft[a.id] }),
+      body: JSON.stringify({ action: "approve", slug: slugDraft[a.id], emotionTags: tagDraft[a.id], image_url: imageDraft[a.id] ?? a.image_url ?? null }),
     });
     if (res.ok) load();
     else setMsg((await res.json().catch(() => ({}))).error ?? "Approve failed.");
@@ -94,11 +98,12 @@ export default function AdminArticlesPage() {
     const res = await fetch("/api/admin/articles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newDraft, emotionTags: newTags }),
+      body: JSON.stringify({ ...newDraft, emotionTags: newTags, image_url: newImage }),
     });
     if (res.ok) {
-      setNewDraft({ title: "", slug: "", excerpt: "", body: "", isAnonymous: true, authorName: "", authorLink: "" });
+      setNewDraft({ title: "", slug: "", excerpt: "", body: "", isAnonymous: true, authorName: "" });
       setNewTags([]);
+      setNewImage(null);
       setTab("published");
       load();
     } else {
@@ -160,6 +165,12 @@ export default function AdminArticlesPage() {
               </button>
             ))}
           </div>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-wide text-ink/40 mb-2">
+              Image (optional) — shown on the article and in share previews
+            </p>
+            <ImageUploader value={newImage} onChange={setNewImage} />
+          </div>
           <button type="submit" className="font-body bg-ink text-white px-6 py-2.5 rounded-full hover:bg-ember transition">
             Publish article
           </button>
@@ -176,17 +187,7 @@ export default function AdminArticlesPage() {
               <h3 className="font-display text-xl mb-1">{a.title}</h3>
               <p className="font-mono text-xs text-ink/50 mb-3">
                 {a.is_anonymous ? "Anonymous submission" : `By ${a.author_name}`}
-                {!a.is_anonymous && a.author_link && (
-                  <> · <a href={a.author_link} target="_blank" rel="noopener noreferrer nofollow" className="underline hover:text-ember">
-                    verify link ↗
-                  </a></>
-                )}
               </p>
-              {!a.is_anonymous && a.author_link && (
-                <p className="font-body text-xs text-ember mb-3">
-                  ⚠ This contributor provided a professional link — please verify it before publishing.
-                </p>
-              )}
               <p className="font-body text-sm text-ink/80 whitespace-pre-line mb-4 max-h-48 overflow-y-auto border-l-2 border-ink/10 pl-4">
                 {a.body}
               </p>
@@ -205,6 +206,16 @@ export default function AdminArticlesPage() {
                     {em.name}
                   </button>
                 ))}
+              </div>
+
+              <p className="font-mono text-xs uppercase tracking-wide text-ink/40 mb-1">
+                Image (optional) — shown on the article and in share previews
+              </p>
+              <div className="mb-4">
+                <ImageUploader
+                  value={imageDraft[a.id] ?? a.image_url ?? null}
+                  onChange={(url) => setImageDraft((prev) => ({ ...prev, [a.id]: url }))}
+                />
               </div>
 
               <div className="flex gap-2">

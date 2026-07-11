@@ -8,6 +8,7 @@ export type Story = {
   triggerWarning: string | null;
   readCount: number;
   helpfulCount: number;
+  imageUrl?: string | null;
 };
 
 export const seedStories: Story[] = [

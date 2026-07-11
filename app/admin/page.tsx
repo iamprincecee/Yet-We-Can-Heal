@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import ImageUploader from "@/components/admin/ImageUploader";
 
 type PendingStory = {
   id: string;
@@ -39,6 +40,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   // Per-story working set of final tags the admin will publish with.
   const [finalTags, setFinalTags] = useState<Record<string, string[]>>({});
+  const [storyImages, setStoryImages] = useState<Record<string, string | null>>({});
   // Inline story editing: which story is being edited, and the draft fields.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ title: string; body: string; what_helped_heal: string }>({
@@ -120,7 +122,7 @@ export default function AdminDashboardPage() {
     const res = await fetch(`/api/admin/stories/${id}/approve`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ emotionTags: finalTags[id] ?? [] }),
+      body: JSON.stringify({ emotionTags: finalTags[id] ?? [], imageUrl: storyImages[id] ?? null }),
     });
     if (res.ok) setQueue((prev) => prev.filter((s) => s.id !== id));
   }
@@ -228,7 +230,7 @@ export default function AdminDashboardPage() {
         <p className="font-mono text-xs uppercase tracking-wide text-ink/50">Live · updates every few seconds</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <MetricCard label="Unique visitors" value={String(metrics?.uniqueVisitors ?? 0)} />
+        <MetricCard label="Unique visits" value={String(metrics?.uniqueVisitors ?? 0)} />
         <MetricCard label="Avg time on site" value={formatDuration(metrics?.avgTimeOnSiteSeconds ?? 0)} />
         <MetricCard label="Stories read" value={String(metrics?.storyReads ?? 0)} />
         <MetricCard label="Submissions" value={String(metrics?.submissions ?? 0)} />
@@ -274,6 +276,15 @@ export default function AdminDashboardPage() {
         <div className="space-y-4">
           {queue.map((story) => (
             <div key={story.id} className="bg-white border border-ink/10 rounded-card shadow-card p-6">
+              <p className="font-mono text-xs uppercase tracking-wide text-ink/40 mb-2">
+                Emotion image (optional) — shown on the story and in share previews
+              </p>
+              <div className="mb-4">
+                <ImageUploader
+                  value={storyImages[story.id] ?? null}
+                  onChange={(url) => setStoryImages((prev) => ({ ...prev, [story.id]: url }))}
+                />
+              </div>
               <p className="font-mono text-xs uppercase tracking-wide text-ink/40 mb-2">
                 Tags to publish — tap to include or exclude
               </p>

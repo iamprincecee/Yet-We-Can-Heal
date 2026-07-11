@@ -20,6 +20,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     reviewed_at: new Date().toISOString(),
   };
   if (finalEmotionTags) updatePayload.emotion_tags = finalEmotionTags;
+  if (typeof body.imageUrl === "string" || body.imageUrl === null) {
+    updatePayload.image_url = body.imageUrl;
+  }
 
   const { error } = await supabase.from("stories").update(updatePayload).eq("id", params.id);
 

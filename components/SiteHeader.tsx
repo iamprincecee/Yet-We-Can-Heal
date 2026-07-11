@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -31,7 +32,7 @@ export default function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-ink/5">
+    <header className="sticky top-0 z-40 bg-paper/90 backdrop-blur border-b border-ink/10">
       <div className="flex items-center justify-between px-6 md:px-12 py-5">
         <Link href="/" className="flex items-baseline gap-2">
           <span className="font-display font-700 text-3xl md:text-4xl leading-none tracking-tight">
@@ -55,10 +56,12 @@ export default function SiteHeader() {
           >
             Need help now
           </Link>
+          <ThemeToggle />
         </nav>
 
         {/* Mobile controls: crisis link stays visible + hamburger */}
         <div className="flex items-center gap-3 md:hidden">
+          <ThemeToggle />
           <Link
             href="/crisis-resources"
             className="font-mono text-[10px] uppercase tracking-wide bg-ink text-white px-3 py-2 rounded-full"

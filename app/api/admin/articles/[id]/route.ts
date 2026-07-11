@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const payload: Record<string, unknown> = {};
 
   // Editable content fields.
-  for (const key of ["title", "excerpt", "body", "author_name", "author_link"]) {
+  for (const key of ["title", "excerpt", "body", "author_name", "author_link", "image_url"]) {
     if (key in updates) payload[key] = updates[key];
   }
   if ("emotionTags" in updates) payload.emotion_tags = updates.emotionTags;

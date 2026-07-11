@@ -52,7 +52,6 @@ export default function ArticleSubmitPage() {
         emotionTags: [...selectedEmotions, ...customEmotions],
         isAnonymous,
         authorName: form.get("authorName"),
-        authorLink: form.get("authorLink"),
       }),
     });
 
@@ -177,22 +176,13 @@ export default function ArticleSubmitPage() {
           </div>
 
           {!isAnonymous && (
-            <div className="space-y-3">
-              <div>
-                <label className="block font-body text-sm mb-1" htmlFor="authorName">Your full name</label>
-                <input id="authorName" name="authorName" type="text"
-                  className="w-full border border-ink/20 rounded-xl px-4 py-2.5 font-body text-sm focus:border-ember outline-none" />
-              </div>
-              <div>
-                <label className="block font-body text-sm mb-1" htmlFor="authorLink">
-                  One professional link <span className="text-ink/40">(optional)</span>
-                </label>
-                <input id="authorLink" name="authorLink" type="url" placeholder="https://..."
-                  className="w-full border border-ink/20 rounded-xl px-4 py-2.5 font-body text-sm focus:border-ember outline-none" />
-                <p className="font-body text-xs text-ink/40 mt-1">
-                  e.g. your practice, portfolio, or professional profile. One link only.
-                </p>
-              </div>
+            <div>
+              <label className="block font-body text-sm mb-1" htmlFor="authorName">Your full name</label>
+              <input id="authorName" name="authorName" type="text"
+                className="w-full border border-ink/20 rounded-xl px-4 py-2.5 font-body text-sm focus:border-ember outline-none" />
+              <p className="font-body text-xs text-ink/40 mt-1">
+                Your name will appear with your article. The piece itself is shareable.
+              </p>
             </div>
           )}
         </div>

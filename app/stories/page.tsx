@@ -23,7 +23,7 @@ function StoriesPageInner() {
     initialFeeling ? [initialFeeling] : []
   );
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "most_read" | "most_helpful">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "most_read" | "most_helpful">("newest");
   const [pickerOpen, setPickerOpen] = useState(!!initialFeeling);
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +115,8 @@ function StoriesPageInner() {
       sorted.sort((a, b) => b.readCount - a.readCount);
     } else if (sortBy === "most_helpful") {
       sorted.sort((a, b) => b.helpfulCount - a.helpfulCount);
+    } else if (sortBy === "oldest") {
+      sorted.reverse();
     }
     return sorted;
   }, [stories, selectedEmotions, query, sortBy]);
@@ -167,6 +169,7 @@ function StoriesPageInner() {
               className="font-mono text-xs uppercase tracking-wide border border-ink/20 rounded-full px-3 py-2 bg-white focus:border-ember outline-none cursor-pointer"
             >
               <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
               <option value="most_read">Most read</option>
               <option value="most_helpful">Most helpful</option>
             </select>

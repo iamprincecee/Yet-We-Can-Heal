@@ -6,6 +6,23 @@
   --font-fraunces: "Fraunces", serif;
   --font-inter: "Inter", sans-serif;
   --font-plex-mono: "IBM Plex Mono", monospace;
+
+  /* Light theme (default) */
+  --color-paper: 255 255 255;   /* #FFFFFF */
+  --color-ink: 26 26 26;        /* #1A1A1A */
+  --color-blush: 251 217 221;   /* #FBD9DD */
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+}
+
+.dark {
+  /* Dark theme — warm near-black, soft off-white text (not pure white,
+     which is harsh). Blush is muted so it doesn't glow. */
+  --color-paper: 20 20 23;      /* deep charcoal */
+  --color-ink: 232 230 227;     /* warm off-white */
+  --color-blush: 74 45 52;      /* muted rose for chips */
+  --surface: #141417;
+  --surface-raised: #1e1e23;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -18,8 +35,56 @@
 }
 
 body {
-  background-color: #FFFFFF;
-  color: #1A1A1A;
+  background-color: var(--surface);
+  color: rgb(var(--color-ink));
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* In dark mode, elements painted with literal white should use the raised
+   surface instead, so cards and panels don't blind the reader. */
+.dark .bg-white {
+  background-color: var(--surface-raised) !important;
+}
+.dark .bg-paper {
+  background-color: var(--surface) !important;
+}
+
+/* Buttons/chips built as "bg-ink text-white" are meant to be a solid dark
+   pill with white text in BOTH themes. Since bg-ink inverts to light in dark
+   mode, force those specific elements to stay dark with white text so they
+   remain readable. We scope narrowly to bg-ink + text-white pairings. */
+.dark .bg-ink.text-white,
+.dark .bg-ink.text-white:hover {
+  background-color: #2a2a30 !important;
+  color: #ffffff !important;
+}
+
+/* Full-bleed "bg-ink text-white" SECTIONS (hero CTA, footer crisis band)
+   should stay dark in dark mode too — a light band with white text is the
+   worst-contrast case. Target sections/divs, not just pills, via a utility. */
+.dark .section-invert {
+  background-color: #0d0d10 !important;
+  color: #e8e6e3 !important;
+}
+
+/* Form fields in dark mode: the default white background with dark text is
+   harsh and low-contrast against the dark page. Give inputs a dark surface,
+   light text, and a subtle border so they read cleanly. */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #1e1e23 !important;
+  color: #e8e6e3 !important;
+  border-color: rgba(232, 230, 227, 0.2) !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(232, 230, 227, 0.4) !important;
+}
+/* Inputs that were explicitly white-backed (rounded form fields) also covered. */
+.dark input.bg-white,
+.dark textarea.bg-white {
+  background-color: #1e1e23 !important;
 }
 
 /* Focus visibility for accessibility */

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { title, excerpt, body, emotionTags, slug, isAnonymous, authorName, authorLink } =
+  const { title, excerpt, body, emotionTags, slug, isAnonymous, authorName, authorLink, image_url } =
     await request.json().catch(() => ({}));
 
   if (!title || !body || !slug) {
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     is_anonymous: isAnonymous !== false,
     author_name: isAnonymous === false ? authorName?.trim() || null : null,
     author_link: isAnonymous === false ? authorLink?.trim() || null : null,
+    image_url: image_url || null,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type Story } from "@/lib/seed-stories";
+import { emotionColor, dominantEmotionColor } from "@/lib/emotions";
 import PaintSplash from "@/components/PaintSplash";
+import ShareButton from "@/components/ShareButton";
 
 export default function StoryDetailPage({ params }: { params: { id: string } }) {
   const [story, setStory] = useState<Story | null>(null);
@@ -30,6 +32,7 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
           triggerWarning: data.trigger_warning,
           readCount: data.read_count,
           helpfulCount: data.helpful_count,
+          imageUrl: data.image_url,
         };
       }
 
@@ -59,7 +62,13 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
 
   if (!story) return notFound();
 
+  const accent = dominantEmotionColor(story.emotionTags);
+
   return (
+    <>
+      {/* Emotion-tied continuity accent: the colour the reader saw on the card
+          carries into the page. */}
+      <div className="h-1.5 w-full" style={{ backgroundColor: accent }} />
     <article className="px-6 md:px-16 py-16 max-w-2xl mx-auto relative">
       <PaintSplash color="ember" className="absolute -top-8 -left-12 w-28 h-28 opacity-40 -z-10" />
 
@@ -68,11 +77,15 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
       </Link>
 
       <div className="flex flex-wrap gap-2 my-6">
-        {story.emotionTags.map((tag) => (
-          <span key={tag} className="font-mono text-xs uppercase tracking-wide bg-blush text-ink/80 px-2 py-1 rounded-full">
-            {tag}
-          </span>
-        ))}
+        {story.emotionTags.map((tag) => {
+          const c = emotionColor(tag);
+          return (
+            <span key={tag} className="font-mono text-xs uppercase tracking-wide px-2 py-1 rounded-full"
+              style={{ backgroundColor: `${c}22`, color: c }}>
+              {tag}
+            </span>
+          );
+        })}
       </div>
 
       {!revealed ? (
@@ -89,6 +102,14 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
         </div>
       ) : (
         <>
+          {story.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={story.imageUrl}
+              alt=""
+              className="w-full h-56 md:h-72 object-cover rounded-card mb-6"
+            />
+          )}
           {story.title && <h1 className="font-display text-3xl md:text-4xl mb-6">{story.title}</h1>}
           <div className="font-body text-lg leading-relaxed text-ink/90 whitespace-pre-line mb-8">
             {story.body}
@@ -101,7 +122,7 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
             <p className="font-body text-ink/90">{story.whatHelpedHeal}</p>
           </div>
 
-          <div className="flex items-center justify-between border-t border-ink/10 pt-6">
+          <div className="flex flex-wrap items-center gap-3 border-t border-ink/10 pt-6">
             <button
               onClick={handleHelpful}
               disabled={markedHelpful}
@@ -109,12 +130,18 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
             >
               {markedHelpful ? "Thank you for letting us know" : "Was this helpful?"}
             </button>
-            <Link href="/stories/submit" className="font-body text-sm px-5 py-2 rounded-full bg-ember text-white hover:brightness-110 transition">
+            <ShareButton
+              title={story.title || "A healing story"}
+              text="A story of survival and healing on Yet, We Can Heal"
+              path={`/stories/${params.id}`}
+            />
+            <Link href="/stories/submit" className="font-body text-sm px-5 py-2 rounded-full bg-ember text-white hover:brightness-110 transition ml-auto">
               Share your own story
             </Link>
           </div>
         </>
       )}
     </article>
+    </>
   );
 }
