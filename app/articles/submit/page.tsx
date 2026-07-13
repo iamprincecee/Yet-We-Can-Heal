@@ -52,6 +52,7 @@ export default function ArticleSubmitPage() {
         emotionTags: [...selectedEmotions, ...customEmotions],
         isAnonymous,
         authorName: form.get("authorName"),
+        notifyEmail: form.get("notifyEmail"),
       }),
     });
 
@@ -185,6 +186,17 @@ export default function ArticleSubmitPage() {
               </p>
             </div>
           )}
+        </div>
+
+        <div>
+          <label className="block font-body text-sm mb-1" htmlFor="notifyEmail">
+            Email <span className="text-ink/40">(optional — only to tell you when it&apos;s published)</span>
+          </label>
+          <input id="notifyEmail" name="notifyEmail" type="email" placeholder="you@example.com"
+            className="w-full border border-ink/20 rounded-xl px-4 py-2.5 font-body text-sm focus:border-ember outline-none" />
+          <p className="font-body text-xs text-ink/40 mt-1">
+            Never shown publicly, never shared — used once, for the good news.
+          </p>
         </div>
 
         <label className="flex items-start gap-3 font-body text-sm text-ink/70">

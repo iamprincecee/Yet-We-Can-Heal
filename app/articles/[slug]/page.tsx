@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import PaintSplash from "@/components/PaintSplash";
 import ShareButton from "@/components/ShareButton";
+import ReportButton from "@/components/ReportButton";
+import FeedbackNote from "@/components/FeedbackNote";
 import { createClient } from "@/lib/supabase/client";
 import { emotionColor, dominantEmotionColor } from "@/lib/emotions";
 
 type Article = {
+  id: string;
   title: string;
   body: string;
   emotion_tags: string[];
@@ -16,6 +19,7 @@ type Article = {
   author_name: string | null;
   author_link: string | null;
   image_url: string | null;
+  trigger_warning: string | null;
 };
 
 export default function ArticleDetailPage() {
@@ -23,17 +27,20 @@ export default function ArticleDetailPage() {
   const slug = params.slug as string;
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
+  const [revealed, setRevealed] = useState(false);
+  const [markedHelpful, setMarkedHelpful] = useState(false);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data } = await supabase
         .from("articles")
-        .select("title, body, emotion_tags, is_anonymous, author_name, author_link, image_url")
+        .select("id, title, body, emotion_tags, is_anonymous, author_name, author_link, image_url, trigger_warning")
         .eq("slug", slug)
         .eq("status", "approved")
         .single();
       setArticle(data);
+      setRevealed(!data?.trigger_warning);
       setLoading(false);
     }
     load();
@@ -90,14 +97,32 @@ export default function ArticleDetailPage() {
         {article.is_anonymous || !article.author_name ? "Written anonymously" : `By ${article.author_name}`}
       </p>
 
-      <div className="font-body text-lg leading-relaxed text-ink/90 whitespace-pre-line mb-10">
-        {article.body}
-      </div>
+      {!revealed ? (
+        <div className="bg-blush/60 rounded-card p-8 text-center mb-10">
+          <p className="font-body text-ink/80 mb-4">
+            <strong>Sensitivity warning:</strong> {article.trigger_warning}
+          </p>
+          <button
+            onClick={() => setRevealed(true)}
+            className="font-body bg-ink text-white px-6 py-3 rounded-full hover:bg-ember transition"
+          >
+            I&apos;m ready to read this
+          </button>
+        </div>
+      ) : (
+        <div className="font-body text-lg leading-relaxed text-ink/90 whitespace-pre-line mb-10">
+          {article.body}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-ink/10 pt-6">
-        <Link href="/stories" className="font-body text-sm px-5 py-2 rounded-full border border-ink/20 hover:border-ember hover:text-ember transition">
-          Read healing stories
-        </Link>
+        <button
+          onClick={() => setMarkedHelpful(true)}
+          disabled={markedHelpful}
+          className="font-body text-sm px-5 py-2 rounded-full border border-ink/20 hover:border-ember hover:text-ember transition disabled:opacity-60"
+        >
+          {markedHelpful ? "This helped 🧡" : "Was this helpful?"}
+        </button>
         <ShareButton
           title={article.title}
           text="A reflection from Yet, We Can Heal"
@@ -106,6 +131,10 @@ export default function ArticleDetailPage() {
         <Link href="/articles/submit" className="font-body text-sm px-5 py-2 rounded-full bg-ember text-white hover:brightness-110 transition ml-auto">
           Write something too
         </Link>
+      </div>
+      {markedHelpful && <FeedbackNote contentType="article" contentId={article.id} />}
+      <div className="mt-4 text-center">
+        <ReportButton contentType="article" contentId={article.id} />
       </div>
     </article>
     </>

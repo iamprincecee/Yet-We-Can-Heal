@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const ctx = auth.ctx;
 
   const { email, role } = await request.json().catch(() => ({}));
-  if (!email || !["editor", "super_admin"].includes(role)) {
+  if (!email || !["editor", "chief_editor", "super_admin"].includes(role)) {
     return NextResponse.json({ error: "Invalid email or role." }, { status: 400 });
   }
 

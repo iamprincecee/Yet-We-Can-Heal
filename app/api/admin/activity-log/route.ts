@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 // rejection, edit, and team-membership change is recorded here with the
 // acting admin's email and a timestamp.
 export async function GET() {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin({ publisher: true });
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const supabase = createClient();

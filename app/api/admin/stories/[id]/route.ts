@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 
-// DELETE /api/admin/stories/:id -- Editor or Super Admin. Permanently removes
-// a submission. Logged to the activity trail for accountability.
+// DELETE /api/admin/stories/:id -- Chief Editor or Super Admin only.
+// Permanently removes a submission. Logged to the activity trail.
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin({ publisher: true });
   if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const ctx = auth.ctx;
 

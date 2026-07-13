@@ -10,6 +10,7 @@ export default function SubmitStoryPage() {
   const [otherInputOpen, setOtherInputOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
   const [consent, setConsent] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export default function SubmitStoryPage() {
         whatHelpedHeal: formData.get("helped"),
         emotionTags: selectedEmotions,
         otherEmotion: customEmotions.length > 0 ? customEmotions.join(", ") : null,
+        notifyEmail: notifyEmail.trim() || null,
       }),
     });
 

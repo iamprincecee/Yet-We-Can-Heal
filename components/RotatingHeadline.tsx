@@ -19,6 +19,13 @@ export default function RotatingHeadline() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // Respect users who prefer reduced motion: don't rotate/fade at all —
+    // show the first message statically.
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+
     const tick = setInterval(() => {
       // fade out, swap, fade in
       setVisible(false);
@@ -35,7 +42,7 @@ export default function RotatingHeadline() {
 
   return (
     <h1
-      className="font-display font-700 text-4xl md:text-6xl text-white leading-[1.05] mb-7 min-h-[2.2em] transition-opacity duration-600"
+      className="font-display font-700 text-3xl sm:text-4xl md:text-6xl text-white leading-[1.1] md:leading-[1.05] mb-6 md:mb-7 min-h-[3.4em] sm:min-h-[2.6em] md:min-h-[2.2em] transition-opacity duration-600"
       style={{ opacity: visible ? 1 : 0, transitionDuration: "600ms" }}
       aria-live="polite"
     >

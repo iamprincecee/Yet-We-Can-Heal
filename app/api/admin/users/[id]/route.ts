@@ -2,6 +2,55 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// PATCH /api/admin/users/:id -- Super Admin only. Promote/demote a member
+// between editor, chief_editor, and super_admin. Founder safeguards apply:
+// the founder's role can't be changed, and only the founder can create or
+// change other super admins.
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const auth = await requireAdmin({ superAdmin: true });
+  if (!auth.ctx) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const ctx = auth.ctx;
+
+  const { role: newRole } = await request.json().catch(() => ({}));
+  if (!["editor", "chief_editor", "super_admin"].includes(newRole)) {
+    return NextResponse.json({ error: "Invalid role." }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("admin_profiles")
+    .select("role, is_founder")
+    .eq("id", params.id)
+    .single();
+
+  if (!target) return NextResponse.json({ error: "Member not found." }, { status: 404 });
+
+  // The founder's role is immutable.
+  if (target.is_founder) {
+    return NextResponse.json({ error: "The founder's role can't be changed." }, { status: 400 });
+  }
+
+  // Only the founder may promote someone TO super_admin or demote a super_admin.
+  const involvesSuperAdmin = newRole === "super_admin" || target.role === "super_admin";
+  if (involvesSuperAdmin) {
+    const { data: caller } = await admin
+      .from("admin_profiles")
+      .select("is_founder")
+      .eq("id", ctx.userId)
+      .single();
+    if (!caller?.is_founder) {
+      return NextResponse.json(
+        { error: "Only the founder can change Super Admin roles." },
+        { status: 403 }
+      );
+    }
+  }
+
+  const { error } = await admin.from("admin_profiles").update({ role: newRole }).eq("id", params.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
 // DELETE /api/admin/users/:id -- Super Admin only.
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin({ superAdmin: true });

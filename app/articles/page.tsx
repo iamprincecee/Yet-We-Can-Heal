@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PaintSplash from "@/components/PaintSplash";
 import { createClient } from "@/lib/supabase/client";
-import { emotionColor, dominantEmotionColor } from "@/lib/emotions";
+import { emotionColor, dominantEmotionColor, emotions } from "@/lib/emotions";
 
 type Article = {
   id: string;
@@ -74,64 +74,68 @@ export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [emotionFilter, setEmotionFilter] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
+
+  const PAGE_SIZE = 24;
 
   useEffect(() => {
-    async function load() {
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // DB-side paginated fetch: search, filter and sort run in Supabase so the
+  // whole table is never downloaded -- scales to thousands of articles.
+  const fetchPage = useCallback(
+    async (pageIndex: number, replace: boolean) => {
       const supabase = createClient();
-      const { data } = await supabase
+      let q = supabase
         .from("articles")
-        .select("id, slug, title, excerpt, body, emotion_tags, is_anonymous, author_name, submitted_at")
-        .eq("status", "approved")
-        .order("submitted_at", { ascending: false });
-      setArticles(data ?? []);
-      setLoading(false);
-    }
-    load();
-  }, []);
+        .select("id, slug, title, excerpt, body, emotion_tags, is_anonymous, author_name, submitted_at",
+          { count: pageIndex === 0 ? "exact" : undefined })
+        .eq("status", "approved");
 
-  // The set of emotion tags actually present, for the filter dropdown.
-  const availableEmotions = useMemo(() => {
-    const set = new Set<string>();
-    articles.forEach((a) => a.emotion_tags?.forEach((t) => set.add(t)));
-    return Array.from(set).sort();
-  }, [articles]);
+      if (emotionFilter !== "all") q = q.contains("emotion_tags", [emotionFilter]);
+      if (debouncedQuery.trim()) {
+        const term = `%${debouncedQuery.trim()}%`;
+        q = q.or(`title.ilike.${term},excerpt.ilike.${term},body.ilike.${term}`);
+      }
+      if (sort === "named") q = q.eq("is_anonymous", false);
+      else if (sort === "anonymous") q = q.eq("is_anonymous", true);
+      q = q.order("submitted_at", { ascending: sort === "oldest" });
 
-  const visible = useMemo(() => {
-    let list = [...articles];
+      const from = pageIndex * PAGE_SIZE;
+      const { data, count } = await q.range(from, from + PAGE_SIZE - 1);
+      const rows = (data ?? []) as Article[];
+      setArticles((prev) => (replace ? rows : [...prev, ...rows]));
+      setHasMore(rows.length === PAGE_SIZE);
+      if (pageIndex === 0 && typeof count === "number") setTotal(count);
+    },
+    [emotionFilter, debouncedQuery, sort]
+  );
 
-    // Keyword search across title, excerpt, body, tags.
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter((a) =>
-        [a.title, a.excerpt, a.body ?? "", ...(a.emotion_tags ?? [])]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)
-      );
-    }
+  useEffect(() => {
+    setLoading(true);
+    setPage(0);
+    fetchPage(0, true).finally(() => setLoading(false));
+  }, [fetchPage]);
 
-    // Emotion filter.
-    if (emotionFilter !== "all") {
-      list = list.filter((a) => a.emotion_tags?.includes(emotionFilter));
-    }
+  async function loadMore() {
+    const next = page + 1;
+    setLoadingMore(true);
+    await fetchPage(next, false);
+    setPage(next);
+    setLoadingMore(false);
+  }
 
-    // Sort.
-    switch (sort) {
-      case "oldest":
-        list.reverse();
-        break;
-      case "named":
-        list = list.filter((a) => !a.is_anonymous && a.author_name);
-        break;
-      case "anonymous":
-        list = list.filter((a) => a.is_anonymous || !a.author_name);
-        break;
-      // "newest" is already the default order from the query.
-    }
-    return list;
-  }, [articles, query, emotionFilter, sort]);
+  // Emotion filter options: the presets (DB filtering handles the actual match).
+
+  const visible = articles;
 
   const activeFilters = query || emotionFilter !== "all" || sort !== "newest";
 
@@ -174,8 +178,8 @@ export default function ArticlesPage() {
           className="border border-ink/20 rounded-full px-4 py-2 font-mono text-xs uppercase tracking-wide focus:border-ember outline-none"
         >
           <option value="all">All feelings</option>
-          {availableEmotions.map((em) => (
-            <option key={em} value={em}>{em}</option>
+          {emotions.map((em) => (
+            <option key={em.id} value={em.id}>{em.name}</option>
           ))}
         </select>
 
@@ -199,24 +203,42 @@ export default function ArticlesPage() {
             Clear
           </button>
         )}
+        {total !== null && (
+          <span className="font-mono text-xs text-ink/40 ml-auto">
+            {total} {total === 1 ? "reflection" : "reflections"}
+          </span>
+        )}
       </div>
 
       {loading ? (
         <p className="font-body text-ink/50">Loading...</p>
       ) : visible.length === 0 ? (
         <p className="font-body text-ink/60">
-          {articles.length === 0 ? (
+          {total === 0 && !activeFilters ? (
             <>No reflections published yet. <Link href="/articles/submit" className="underline hover:text-ember">Be the first to write one.</Link></>
           ) : (
             "No reflections match your search yet."
           )}
         </p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {visible.map((article) => (
-            <ArticleCard key={article.id} article={article} />
-          ))}
-        </div>
+        <>
+          <div className="grid md:grid-cols-2 gap-6">
+            {visible.map((article) => (
+              <ArticleCard key={article.id} article={article} />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="text-center mt-10">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="font-body bg-ink text-white px-8 py-3 rounded-full hover:bg-ember transition disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more reflections"}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

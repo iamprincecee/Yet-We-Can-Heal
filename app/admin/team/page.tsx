@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-type Member = { id: string; email: string; role: "super_admin" | "editor"; is_founder: boolean };
+type Member = { id: string; email: string; role: "super_admin" | "chief_editor" | "editor"; is_founder: boolean };
 
 export default function TeamManagementPage() {
   const [team, setTeam] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<"super_admin" | "editor">("editor");
+  const [newRole, setNewRole] = useState<"super_admin" | "chief_editor" | "editor">("editor");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -69,6 +69,21 @@ export default function TeamManagementPage() {
     }
   }
 
+  async function changeRole(id: string, role: Member["role"]) {
+    setError(null);
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    if (res.ok) {
+      setTeam((prev) => prev.map((m) => (m.id === id ? { ...m, role } : m)));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Couldn't change that role.");
+    }
+  }
+
   return (
     <section className="px-6 md:px-16 py-12 max-w-2xl mx-auto">
       <Link href="/admin" className="font-mono text-xs uppercase tracking-wide text-ink/50 hover:text-ember">
@@ -106,25 +121,43 @@ export default function TeamManagementPage() {
                       ? "Founder · Super Admin"
                       : member.role === "super_admin"
                         ? "Super Admin"
-                        : "Editor"}
+                        : member.role === "chief_editor"
+                          ? "Chief Editor"
+                          : "Editor"}
                   </p>
                 </div>
-                {canRemove ? (
-                  <button
-                    onClick={() => removeMember(member.id)}
-                    className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember"
-                  >
-                    Remove
-                  </button>
-                ) : (
-                  <span className="font-mono text-xs uppercase tracking-wide text-ink/20" title={
-                    member.is_founder ? "The founder can't be removed" :
-                    isSelf ? "You can't remove yourself" :
-                    "Only the founder can remove a Super Admin"
-                  }>
-                    —
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  {/* Role change: allowed unless founder or self. Super-admin
+                      changes are further gated to the founder by the API. */}
+                  {!member.is_founder && !isSelf && (
+                    <select
+                      value={member.role}
+                      onChange={(e) => changeRole(member.id, e.target.value as Member["role"])}
+                      className="font-mono text-xs uppercase tracking-wide border border-ink/20 rounded-full px-3 py-1.5 focus:border-ember outline-none"
+                      aria-label={`Change role for ${member.email}`}
+                    >
+                      <option value="editor">Editor</option>
+                      <option value="chief_editor">Chief Editor</option>
+                      {currentIsFounder && <option value="super_admin">Super Admin</option>}
+                    </select>
+                  )}
+                  {canRemove ? (
+                    <button
+                      onClick={() => removeMember(member.id)}
+                      className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <span className="font-mono text-xs uppercase tracking-wide text-ink/20" title={
+                      member.is_founder ? "The founder can't be removed" :
+                      isSelf ? "You can't remove yourself" :
+                      "Only the founder can remove a Super Admin"
+                    }>
+                      —
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -149,7 +182,8 @@ export default function TeamManagementPage() {
           onChange={(e) => setNewRole(e.target.value as "super_admin" | "editor")}
           className="w-full border border-ink/20 rounded-xl px-4 py-3 font-body focus:border-ember outline-none"
         >
-          <option value="editor">Editor -- review, approve, edit stories</option>
+          <option value="editor">Editor -- reviews &amp; readies content</option>
+          <option value="chief_editor">Chief Editor -- final approval &amp; publishing</option>
           <option value="super_admin">Super Admin -- full access + team management</option>
         </select>
         {error && <p className="font-body text-sm text-ember">{error}</p>}

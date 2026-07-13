@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type AdminRole = "editor" | "super_admin";
+export type AdminRole = "editor" | "chief_editor" | "super_admin";
 
 export type AdminContext = {
   userId: string;
@@ -17,11 +17,14 @@ export type AdminContext = {
 //
 // Then confirms the authenticated user actually has an admin_profiles row,
 // so a valid Supabase login alone is never enough -- they must have been
-// explicitly added as Editor or Super Admin. Optionally requires super_admin.
+// explicitly added. Options can require a minimum role:
+//   - superAdmin: true  -> only super_admin
+//   - publisher: true   -> chief_editor or super_admin (final approval, sending
+//                          message replies, acting on reports)
 //
 // Returns either { ctx } on success or { error, status } to return directly.
 export async function requireAdmin(
-  options: { superAdmin?: boolean } = {}
+  options: { superAdmin?: boolean; publisher?: boolean } = {}
 ): Promise<
   | { ctx: AdminContext; error?: undefined; status?: undefined }
   | { ctx?: undefined; error: string; status: number }
@@ -47,15 +50,24 @@ export async function requireAdmin(
     return { error: "Not authorized.", status: 403 };
   }
 
-  if (options.superAdmin && profile.role !== "super_admin") {
+  const role = profile.role as AdminRole;
+
+  if (options.superAdmin && role !== "super_admin") {
     return { error: "Only Super Admins can perform this action.", status: 403 };
+  }
+
+  if (options.publisher && role !== "super_admin" && role !== "chief_editor") {
+    return {
+      error: "Only Chief Editors or Super Admins can perform this action.",
+      status: 403,
+    };
   }
 
   return {
     ctx: {
       userId: user.id,
       email: user.email ?? "",
-      role: profile.role as AdminRole,
+      role,
     },
   };
 }

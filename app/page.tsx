@@ -43,7 +43,7 @@ export default function LandingPage() {
 
       {/* Mission — set apart with wide breathing room above, tighter below,
           so it lands like a held thought rather than just another band. */}
-      <section className="px-6 md:px-16 pt-28 pb-16 max-w-2xl mx-auto text-center relative">
+      <section className="px-6 md:px-16 pt-16 md:pt-28 pb-12 md:pb-16 max-w-2xl mx-auto text-center relative">
         <PaintSplash
           color="marigold"
           className="absolute top-6 -left-10 w-28 h-28 opacity-60 -z-10"
@@ -51,29 +51,29 @@ export default function LandingPage() {
         <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink/40 mb-6">
           What this is
         </p>
-        <p className="font-display text-2xl md:text-[2rem] leading-[1.35] text-ink">
+        <p className="font-display text-xl md:text-[2rem] leading-[1.4] md:leading-[1.35] text-ink">
           Not therapy. Not advice. Just the plain proof that you are not the
           first to feel this — and not the only one who made it to the other side.
         </p>
       </section>
 
       {/* A thin, human divider line of meaning instead of empty space. */}
-      <section className="px-6 md:px-16 pb-24 max-w-4xl mx-auto">
+      <section className="px-6 md:px-16 pb-16 md:pb-24 max-w-4xl mx-auto">
         <div className="grid sm:grid-cols-3 gap-8 text-center">
           <div>
-            <p className="font-display text-4xl text-ember mb-2">Read</p>
+            <p className="font-display text-3xl sm:text-4xl text-ember mb-2">Read</p>
             <p className="font-body text-sm text-ink/60 leading-relaxed">
               Find a story from someone who felt the way you do right now.
             </p>
           </div>
           <div>
-            <p className="font-display text-4xl text-tidewater mb-2">Reflect</p>
+            <p className="font-display text-3xl sm:text-4xl text-tidewater mb-2">Reflect</p>
             <p className="font-body text-sm text-ink/60 leading-relaxed">
               Take a moment with it. Let someone else&apos;s words meet you where you are.
             </p>
           </div>
           <div>
-            <p className="font-display text-4xl text-plum mb-2">Share</p>
+            <p className="font-display text-3xl sm:text-4xl text-plum mb-2">Share</p>
             <p className="font-body text-sm text-ink/60 leading-relaxed">
               When you&apos;re ready — if you ever are — your story might be the one someone else needs.
             </p>
@@ -86,7 +86,7 @@ export default function LandingPage() {
 
       {/* Closing CTA — full-bleed dark, more vertical weight than the mid-page
           sections so it reads as an arrival, not a repeat. */}
-      <section className="section-invert px-6 md:px-16 py-28 bg-ink text-white text-center relative overflow-hidden">
+      <section className="section-invert px-6 md:px-16 py-16 md:py-28 bg-ink text-white text-center relative overflow-hidden">
         <PaintSplash
           color="plum"
           className="absolute -bottom-20 -left-16 w-64 h-64 opacity-40 -z-0"

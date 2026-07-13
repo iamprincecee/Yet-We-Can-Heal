@@ -11,24 +11,72 @@ type Message = {
   message: string;
   status: "new" | "read" | "archived";
   submitted_at: string;
+  reply_draft: string | null;
+  reply_sent: string | null;
 };
 
 export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "new" | "archived">("all");
+  const [isPublisher, setIsPublisher] = useState(false);
+  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       const res = await fetch("/api/admin/contact");
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages ?? []);
+        const list: Message[] = data.messages ?? [];
+        setMessages(list);
+        const d: Record<string, string> = {};
+        list.forEach((m) => { d[m.id] = m.reply_draft ?? ""; });
+        setReplyDraft(d);
       }
       setLoading(false);
     }
     load();
+    loadRole();
   }, []);
+
+  async function loadRole() {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single();
+      const r = profile?.role;
+      setIsPublisher(r === "super_admin" || r === "chief_editor");
+    }
+  }
+
+  async function saveDraft(id: string) {
+    const res = await fetch("/api/admin/contact", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, replyDraft: replyDraft[id] ?? "" }),
+    });
+    if (res.ok) {
+      setMsg("Draft saved.");
+      setTimeout(() => setMsg(null), 1500);
+    }
+  }
+
+  async function sendReply(id: string) {
+    const res = await fetch("/api/admin/contact", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, replySent: replyDraft[id] ?? "" }),
+    });
+    if (res.ok) {
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, reply_sent: replyDraft[id], status: "read" } : m)));
+      setMsg("Reply recorded as sent.");
+      setTimeout(() => setMsg(null), 1500);
+    } else {
+      setMsg((await res.json().catch(() => ({}))).error ?? "Couldn't send.");
+    }
+  }
 
   async function setStatus(id: string, status: Message["status"]) {
     const res = await fetch("/api/admin/contact", {
@@ -65,6 +113,8 @@ export default function AdminMessagesPage() {
           </span>
         )}
       </h1>
+
+      {msg && <p className="font-body text-sm text-tidewater mb-4">{msg}</p>}
 
       <div className="flex gap-2 mb-8">
         {(["all", "new", "archived"] as const).map((f) => (
@@ -108,12 +158,51 @@ export default function AdminMessagesPage() {
                 </span>
               </div>
               <p className="font-body text-sm text-ink/80 whitespace-pre-line mb-4">{m.message}</p>
+
+              {/* Reply workflow: any admin can draft; only publishers can send.
+                  Once sent, the sent reply is shown and locked. */}
+              {m.reply_sent ? (
+                <div className="bg-tidewater/10 border-l-4 border-tidewater rounded-r-lg p-3 mb-4">
+                  <p className="font-mono text-xs uppercase tracking-wide text-tidewater mb-1">Reply sent</p>
+                  <p className="font-body text-sm text-ink/80 whitespace-pre-line">{m.reply_sent}</p>
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <p className="font-mono text-xs uppercase tracking-wide text-ink/40 mb-1">
+                    {isPublisher ? "Draft & send a reply" : "Draft a reply (a Chief Editor will send it)"}
+                  </p>
+                  <textarea
+                    value={replyDraft[m.id] ?? ""}
+                    onChange={(e) => setReplyDraft((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                    rows={3}
+                    placeholder="Write a considered reply…"
+                    className="w-full border border-ink/20 rounded-xl px-4 py-2.5 font-body text-sm mb-2 focus:border-ember outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => saveDraft(m.id)}
+                      className="font-body text-sm border border-ink/20 px-4 py-2 rounded-full hover:border-ink/50 transition"
+                    >
+                      Save draft
+                    </button>
+                    {isPublisher && (
+                      <button
+                        onClick={() => sendReply(m.id)}
+                        className="font-body text-sm bg-ink text-white px-4 py-2 rounded-full hover:bg-ember transition"
+                      >
+                        Send reply
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <a
                   href={`mailto:${m.email}?subject=Re: ${encodeURIComponent(m.subject ?? "Your message to Yet, We Can Heal")}`}
-                  className="font-body text-sm bg-ink text-white px-4 py-2 rounded-full hover:bg-ember transition"
+                  className="font-body text-sm border border-ink/20 px-4 py-2 rounded-full hover:border-ink/50 transition"
                 >
-                  Reply by email
+                  Open in email
                 </a>
                 {m.status === "new" && (
                   <button

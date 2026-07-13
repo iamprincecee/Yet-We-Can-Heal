@@ -20,6 +20,31 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "No editable fields provided." }, { status: 400 });
   }
 
+  // Fetch current state: needed to (a) snapshot the original before the first
+  // edit, so Chief Editors can compare, and (b) gate post-publish edits.
+  const { data: current } = await supabase
+    .from("stories")
+    .select("status, title, body, what_helped_heal, original_body")
+    .eq("id", params.id)
+    .single();
+
+  if (!current) return NextResponse.json({ error: "Story not found." }, { status: 404 });
+
+  // Published content may only be edited by publishers (chief editor / super admin).
+  if (current.status === "approved" && ctx.role !== "super_admin" && ctx.role !== "chief_editor") {
+    return NextResponse.json(
+      { error: "Only Chief Editors or Super Admins can edit published stories." },
+      { status: 403 }
+    );
+  }
+
+  // First edit? Preserve the untouched original for review comparison.
+  if (!current.original_body) {
+    payload.original_title = current.title;
+    payload.original_body = current.body;
+    payload.original_what_helped = current.what_helped_heal;
+  }
+
   const { error } = await supabase.from("stories").update(payload).eq("id", params.id);
 
   if (error) {

@@ -52,7 +52,7 @@ export default function SiteHeader() {
           ))}
           <Link
             href="/crisis-resources"
-            className="font-mono text-xs uppercase tracking-wide bg-ink text-white px-3 py-2 rounded-full hover:bg-ember transition-colors"
+            className="font-mono text-xs uppercase tracking-wide bg-ember text-white px-4 py-2 rounded-full hover:brightness-110 transition shadow-sm whitespace-nowrap"
           >
             Need help now
           </Link>
@@ -60,13 +60,13 @@ export default function SiteHeader() {
         </nav>
 
         {/* Mobile controls: crisis link stays visible + hamburger */}
-        <div className="flex items-center gap-3 md:hidden">
+        <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
           <Link
             href="/crisis-resources"
-            className="font-mono text-[10px] uppercase tracking-wide bg-ink text-white px-3 py-2 rounded-full"
+            className="font-mono text-[10px] uppercase tracking-wide bg-ember text-white px-3 py-2 rounded-full hover:brightness-110 transition whitespace-nowrap"
           >
-            Need help now
+            Need help
           </Link>
           <button
             type="button"

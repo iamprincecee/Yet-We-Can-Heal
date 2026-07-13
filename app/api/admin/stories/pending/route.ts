@@ -11,12 +11,20 @@ export async function GET() {
   const { data, error } = await supabase
     .from("stories")
     .select("*")
-    .eq("status", "pending")
+    .in("status", ["pending", "ready"])
     .order("submitted_at", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ stories: data });
+  // Published stories too, so publishers can manage/edit them post-publication.
+  const { data: published } = await supabase
+    .from("stories")
+    .select("id, title, body, what_helped_heal, emotion_tags, trigger_warning, image_url, read_count, helpful_count")
+    .eq("status", "approved")
+    .order("reviewed_at", { ascending: false })
+    .limit(100);
+
+  return NextResponse.json({ stories: data, published: published ?? [] });
 }

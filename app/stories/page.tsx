@@ -1,12 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import StoryCard from "@/components/StoryCard";
 import { createClient } from "@/lib/supabase/client";
 import { type Story } from "@/lib/seed-stories";
 import { emotions } from "@/lib/emotions";
+
+const PAGE_SIZE = 24;
 
 export default function StoriesPage() {
   return (
@@ -16,6 +18,20 @@ export default function StoriesPage() {
   );
 }
 
+function mapStory(s: any): Story {
+  return {
+    id: s.id,
+    title: s.title,
+    excerpt: s.body.slice(0, 120) + (s.body.length > 120 ? "..." : ""),
+    body: s.body,
+    whatHelpedHeal: s.what_helped_heal,
+    emotionTags: s.emotion_tags,
+    triggerWarning: s.trigger_warning,
+    readCount: s.read_count,
+    helpfulCount: s.helpful_count,
+  };
+}
+
 function StoriesPageInner() {
   const searchParams = useSearchParams();
   const initialFeeling = searchParams.get("feeling");
@@ -23,39 +39,76 @@ function StoriesPageInner() {
     initialFeeling ? [initialFeeling] : []
   );
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "most_read" | "most_helpful">("newest");
   const [pickerOpen, setPickerOpen] = useState(!!initialFeeling);
+
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState<number | null>(null);
 
+  // Debounce the search box so we query the DB at most every 350ms.
   useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("stories")
-        .select("*")
-        .eq("status", "approved")
-        .order("submitted_at", { ascending: false });
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
+  }, [query]);
 
-      if (data) {
-        setStories(
-          data.map((s: any) => ({
-            id: s.id,
-            title: s.title,
-            excerpt: s.body.slice(0, 120) + (s.body.length > 120 ? "..." : ""),
-            body: s.body,
-            whatHelpedHeal: s.what_helped_heal,
-            emotionTags: s.emotion_tags,
-            triggerWarning: s.trigger_warning,
-            readCount: s.read_count,
-            helpfulCount: s.helpful_count,
-          }))
-        );
+  // Build and run a page query against Supabase. Filtering, search and sort all
+  // happen in the DB (via .range/.ilike/.overlaps/.order) so we never download
+  // the whole table -- this is what lets it scale to thousands of stories.
+  const fetchPage = useCallback(
+    async (pageIndex: number, replace: boolean) => {
+      const supabase = createClient();
+      let q = supabase
+        .from("stories")
+        .select("*", { count: pageIndex === 0 ? "exact" : undefined })
+        .eq("status", "approved");
+
+      if (selectedEmotions.length > 0) {
+        // overlaps = row's emotion_tags array shares any value with the filter.
+        q = q.overlaps("emotion_tags", selectedEmotions);
       }
-      setLoading(false);
-    }
-    load();
-  }, []);
+      if (debouncedQuery.trim()) {
+        const term = `%${debouncedQuery.trim()}%`;
+        // Search title OR body OR what_helped_heal.
+        q = q.or(`title.ilike.${term},body.ilike.${term},what_helped_heal.ilike.${term}`);
+      }
+
+      // Sort.
+      if (sortBy === "most_read") q = q.order("read_count", { ascending: false });
+      else if (sortBy === "most_helpful") q = q.order("helpful_count", { ascending: false });
+      else if (sortBy === "oldest") q = q.order("submitted_at", { ascending: true });
+      else q = q.order("submitted_at", { ascending: false });
+
+      const from = pageIndex * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await q.range(from, to);
+
+      const mapped = (data ?? []).map(mapStory);
+      setStories((prev) => (replace ? mapped : [...prev, ...mapped]));
+      setHasMore(mapped.length === PAGE_SIZE);
+      if (pageIndex === 0 && typeof count === "number") setTotal(count);
+    },
+    [selectedEmotions, debouncedQuery, sortBy]
+  );
+
+  // Reload from page 0 whenever filters/search/sort change.
+  useEffect(() => {
+    setLoading(true);
+    setPage(0);
+    fetchPage(0, true).finally(() => setLoading(false));
+  }, [fetchPage]);
+
+  async function loadMore() {
+    const next = page + 1;
+    setLoadingMore(true);
+    await fetchPage(next, false);
+    setPage(next);
+    setLoadingMore(false);
+  }
 
   function toggleEmotion(id: string) {
     setSelectedEmotions((prev) =>
@@ -63,63 +116,12 @@ function StoriesPageInner() {
     );
   }
 
-  // The filter list is the eight presets PLUS any other emotion tags that
-  // actually appear on live stories (e.g. a custom "betrayed" tag an admin
-  // approved). This keeps the reader's filter in sync with what's genuinely
-  // in the collection -- no dead options, and custom tags become filterable
-  // the moment a story using them is published.
-  const filterOptions = useMemo(() => {
-    const presetIds = new Set(emotions.map((e) => e.id));
-    const options = emotions.map((e) => ({ id: e.id, name: e.name }));
-    const seen = new Set<string>();
-    for (const story of stories) {
-      for (const tag of story.emotionTags) {
-        if (!presetIds.has(tag) && !seen.has(tag)) {
-          seen.add(tag);
-          // Title-case a raw tag for display, keep the raw value as the id.
-          options.push({ id: tag, name: tag.charAt(0).toUpperCase() + tag.slice(1) });
-        }
-      }
-    }
-    return options;
-  }, [stories]);
-
-  const filtered = useMemo(() => {
-    let result = stories;
-
-    if (selectedEmotions.length > 0) {
-      result = result.filter((s) => s.emotionTags.some((tag) => selectedEmotions.includes(tag)));
-    }
-
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      // Search across the actual story content -- title, body, what helped,
-      // and emotion tags -- not just the tags.
-      result = result.filter((s) => {
-        const haystack = [
-          s.title ?? "",
-          s.body,
-          s.whatHelpedHeal,
-          s.emotionTags.join(" "),
-        ]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      });
-    }
-
-    // Sort a shallow copy so we never mutate state. "Newest" keeps the order
-    // the stories arrived in (the DB query already returns newest-first).
-    const sorted = [...result];
-    if (sortBy === "most_read") {
-      sorted.sort((a, b) => b.readCount - a.readCount);
-    } else if (sortBy === "most_helpful") {
-      sorted.sort((a, b) => b.helpfulCount - a.helpfulCount);
-    } else if (sortBy === "oldest") {
-      sorted.reverse();
-    }
-    return sorted;
-  }, [stories, selectedEmotions, query, sortBy]);
+  // Filter options: the 8 presets always available (DB-side filtering handles
+  // custom tags too if a reader picks one, but we surface presets here).
+  const filterOptions = useMemo(
+    () => emotions.map((e) => ({ id: e.id, name: e.name })),
+    []
+  );
 
   return (
     <section className="px-6 md:px-16 py-16 max-w-6xl mx-auto">
@@ -175,36 +177,25 @@ function StoriesPageInner() {
             </select>
           </label>
 
-          <span className="font-mono text-xs text-ink/40 ml-auto">
-            {filtered.length} {filtered.length === 1 ? "story" : "stories"}
-          </span>
+          {total !== null && (
+            <span className="font-mono text-xs text-ink/40 ml-auto">
+              {total} {total === 1 ? "story" : "stories"}
+            </span>
+          )}
         </div>
 
-        {/* Active filter chips -- always-visible summary of what's applied */}
         {selectedEmotions.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {selectedEmotions.map((id) => {
               const label = filterOptions.find((e) => e.id === id)?.name ?? id;
               return (
-                <span
-                  key={id}
-                  className="font-mono text-xs uppercase tracking-wide bg-ink text-white px-3 py-1.5 rounded-full inline-flex items-center gap-2"
-                >
+                <span key={id} className="font-mono text-xs uppercase tracking-wide bg-ink text-white px-3 py-1.5 rounded-full inline-flex items-center gap-2">
                   {label}
-                  <button
-                    onClick={() => toggleEmotion(id)}
-                    aria-label={`Remove ${label} filter`}
-                    className="hover:opacity-70"
-                  >
-                    ✕
-                  </button>
+                  <button onClick={() => toggleEmotion(id)} aria-label={`Remove ${label} filter`} className="hover:opacity-70">✕</button>
                 </span>
               );
             })}
-            <button
-              onClick={() => setSelectedEmotions([])}
-              className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember px-2 py-1.5"
-            >
+            <button onClick={() => setSelectedEmotions([])} className="font-mono text-xs uppercase tracking-wide text-ink/40 hover:text-ember px-2 py-1.5">
               Clear all
             </button>
           </div>
@@ -217,9 +208,7 @@ function StoriesPageInner() {
                 key={e.id}
                 onClick={() => toggleEmotion(e.id)}
                 className={`font-mono text-xs uppercase tracking-wide px-3 py-2 rounded-full border transition-colors ${
-                  selectedEmotions.includes(e.id)
-                    ? "bg-ink text-white border-ink"
-                    : "border-ink/20 text-ink/60 hover:border-ink/50"
+                  selectedEmotions.includes(e.id) ? "bg-ink text-white border-ink" : "border-ink/20 text-ink/60 hover:border-ink/50"
                 }`}
               >
                 {e.name}
@@ -231,7 +220,7 @@ function StoriesPageInner() {
 
       {loading ? (
         <p className="font-body text-ink/50">Loading stories...</p>
-      ) : filtered.length === 0 ? (
+      ) : stories.length === 0 ? (
         <p className="font-body text-ink/60">
           No stories match yet -- but that doesn&apos;t mean you&apos;re alone.{" "}
           <Link href="/stories/submit" className="underline hover:text-ember">
@@ -239,11 +228,24 @@ function StoriesPageInner() {
           </Link>
         </p>
       ) : (
-        <div className="grid md:grid-cols-3 gap-6">
-          {filtered.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-        </div>
+        <>
+          <div className="grid md:grid-cols-3 gap-6">
+            {stories.map((story) => (
+              <StoryCard key={story.id} story={story} />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="text-center mt-10">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="font-body bg-ink text-white px-8 py-3 rounded-full hover:bg-ember transition disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more stories"}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

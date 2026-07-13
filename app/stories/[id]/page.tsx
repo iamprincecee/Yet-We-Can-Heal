@@ -8,6 +8,8 @@ import { type Story } from "@/lib/seed-stories";
 import { emotionColor, dominantEmotionColor } from "@/lib/emotions";
 import PaintSplash from "@/components/PaintSplash";
 import ShareButton from "@/components/ShareButton";
+import ReportButton from "@/components/ReportButton";
+import FeedbackNote from "@/components/FeedbackNote";
 
 export default function StoryDetailPage({ params }: { params: { id: string } }) {
   const [story, setStory] = useState<Story | null>(null);
@@ -126,9 +128,9 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
             <button
               onClick={handleHelpful}
               disabled={markedHelpful}
-              className="font-body text-sm px-5 py-2 rounded-full border border-ink/20 hover:border-ember hover:text-ember transition disabled:opacity-50"
+              className="font-body text-sm px-5 py-2 rounded-full border border-ink/20 hover:border-ember hover:text-ember transition disabled:opacity-60"
             >
-              {markedHelpful ? "Thank you for letting us know" : "Was this helpful?"}
+              {markedHelpful ? "This helped 🧡" : "Was this helpful?"}
             </button>
             <ShareButton
               title={story.title || "A healing story"}
@@ -138,6 +140,10 @@ export default function StoryDetailPage({ params }: { params: { id: string } }) 
             <Link href="/stories/submit" className="font-body text-sm px-5 py-2 rounded-full bg-ember text-white hover:brightness-110 transition ml-auto">
               Share your own story
             </Link>
+          </div>
+          {markedHelpful && <FeedbackNote contentType="story" contentId={params.id} />}
+          <div className="mt-4 text-center">
+            <ReportButton contentType="story" contentId={params.id} />
           </div>
         </>
       )}

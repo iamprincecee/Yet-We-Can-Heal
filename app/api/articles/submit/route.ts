@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
-  const { title, excerpt, body: articleBody, emotionTags, isAnonymous, authorName } =
+  const { title, excerpt, body: articleBody, emotionTags, isAnonymous, authorName, notifyEmail } =
     body;
 
   if (!title || !articleBody) {
@@ -31,6 +31,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // Optional: an email used ONLY to notify the submitter when published.
+  const email = typeof notifyEmail === "string" ? notifyEmail.trim() : "";
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "That email doesn't look right — or leave it empty." }, { status: 400 });
+  }
+
   const supabase = createClient();
   const { error } = await supabase.from("articles").insert({
     slug: null, // admin assigns a clean slug at approval
@@ -42,6 +48,7 @@ export async function POST(request: Request) {
     is_anonymous: isAnonymous !== false,
     author_name: isAnonymous === false ? authorName.trim() : null,
     author_link: null,
+    notify_email: email || null,
   });
 
   if (error) {

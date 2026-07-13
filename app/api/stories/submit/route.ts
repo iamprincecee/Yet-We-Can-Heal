@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 // POST /api/stories/submit -- open to anonymous visitors, no login required.
@@ -18,17 +19,28 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = createClient();
+  // Use the admin client for the insert. Submission is a controlled public
+  // action (we force status='pending' below), and the anon client hits an
+  // RLS trap: the insert policy allows INSERT, but the public SELECT policy
+  // only exposes APPROVED stories, so the ".select() the new row back" step
+  // fails RLS and surfaces as a violation. The admin client sidesteps that.
+  const supabase = createAdminClient();
   const body = await request.json().catch(() => null);
 
   if (!body) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { title, body: storyBody, whatHelpedHeal, emotionTags, otherEmotion } = body;
+  const { title, body: storyBody, whatHelpedHeal, emotionTags, otherEmotion, notifyEmail } = body;
 
   if (!storyBody || !whatHelpedHeal) {
     return NextResponse.json({ error: "Story and 'what helped you heal' are required." }, { status: 400 });
+  }
+
+  // Optional: an email used ONLY to notify the submitter when published.
+  const email = typeof notifyEmail === "string" ? notifyEmail.trim() : "";
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "That email doesn't look right — or leave it empty." }, { status: 400 });
   }
 
   const { data, error } = await supabase
@@ -39,7 +51,8 @@ export async function POST(request: Request) {
       what_helped_heal: whatHelpedHeal,
       emotion_tags: emotionTags ?? [],
       other_emotion: otherEmotion || null,
-      status: "pending",
+      notify_email: email || null,
+      status: "pending", // forced -- never trust client for this
     })
     .select("id")
     .single();

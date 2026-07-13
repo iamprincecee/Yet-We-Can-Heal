@@ -52,9 +52,10 @@ export default function RootLayout({
       <body
         className={`${fraunces.variable} ${inter.variable} ${plexMono.variable} font-body antialiased`}
       >
+        <a href="#main-content" className="sr-only skip-link">Skip to content</a>
         <SiteHeader />
         <VisitorTracker />
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
         <footer className="mt-24 border-t border-ink/10 bg-paper">
           {/* Crisis line first and prominent — for a platform like this, the
               most important thing in the footer is the fastest path to help. */}
